@@ -1,2 +1,9 @@
+0.0.2
+- first working edison
+- fully rewrited
+  - drop html parsing
+  - json based solution
+- Special thanks to BlaiSeCT
+
 0.0.1
 - initial version
