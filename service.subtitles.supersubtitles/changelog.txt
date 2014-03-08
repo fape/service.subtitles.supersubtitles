@@ -1,5 +1,5 @@
 0.0.2
-- first working edison
+- first working edition
 - fully rewrited
   - drop html parsing
   - json based solution

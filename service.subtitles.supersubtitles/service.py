@@ -57,6 +57,7 @@ RELEASERS={
   'ORENJI',
   'TLA'
 }
+HEADERS = { 'User-Agent': 'xbmc subtitle plugin' }
 
 if xbmcvfs.exists(__temp__):
   shutil.rmtree(__temp__)
@@ -119,8 +120,7 @@ def debuglog(msg):
   xbmc.log((u"### [%s] - %s" % (__scriptname__ ,msg,)).encode('utf-8'),level=xbmc.LOGDEBUG )
 
 def queryData(params):
-  headers = { 'User-Agent': 'xbmc subtitle plugin' }
-  r=requests.get(BASE_URL,params=params, headers=headers)
+  r=requests.get(BASE_URL,params=params, headers=HEADERS)
   log(r.url)
   try:
     return r.json()
@@ -208,7 +208,7 @@ def Search(item):
 def download_file(item):
   localfile=os.path.join(__temp__,item['filename'].decode("utf-8"))
   params={'action':'letolt', 'felirat': item['id']}
-  r = requests.get(BASE_URL, params=params, stream=True)
+  r = requests.get(BASE_URL, params=params, headers=HEADERS, stream=True)
   with open(localfile, 'wb') as fd:
     for chunk in r.iter_content(chunk_size=1024):
       fd.write(chunk)
