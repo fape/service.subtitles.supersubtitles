@@ -38,6 +38,7 @@ TAGS= {
 }
 
 QUALITIES={
+  'HDTV',
   '720p',
   '1080p',
   'DVDRip',
@@ -151,7 +152,7 @@ def notification(id):
 
 def getId(item):
   ret = None
-  params = {'action': 'autoname', 'nyelv': 'Angol', 'term': item['tvshow']}
+  params = {'action': 'autoname', 'nyelv': '0', 'term': item['tvshow']}
   datas = queryData(params)
   if datas:
     if item['year']:
@@ -213,7 +214,9 @@ def search_subtitles(item):
 
   searchlist  = []
   for st in data.values():
-    searchlist.append(convert(st))
+    converted=convert(st)
+    if converted['language_eng'] in item['languages']:
+      searchlist.append(converted)
 
   searchlist.sort(key = lambda k: k['rating'], reverse = True)
   return searchlist
