@@ -13,6 +13,7 @@ import requests
 import simplejson
 import os.path
 import re
+import random
 
 __addon__ = xbmcaddon.Addon()
 __author__     = __addon__.getAddonInfo('author')
@@ -25,6 +26,8 @@ __cwd__        = xbmc.translatePath( __addon__.getAddonInfo('path') ).decode("ut
 __profile__    = xbmc.translatePath( __addon__.getAddonInfo('profile') ).decode("utf-8")
 #__resource__   = xbmc.translatePath( os.path.join( __cwd__, 'resources', 'lib' ) ).decode("utf-8")
 __temp__       = xbmc.translatePath( os.path.join( __profile__, 'temp') ).decode("utf-8")
+
+#sys.path.append (__resource__)
 
 BASE_URL='http://www.feliratok.info/index.php'
 
@@ -54,87 +57,116 @@ RELEASERS={
   'IMMERSE',
   'KiNGS',
   'LOL',
+  'REMARKABLE',
   'ORENJI',
   'TLA'
 }
 HEADERS = { 'User-Agent': 'xbmc subtitle plugin' }
 
-if xbmcvfs.exists(__temp__):
-  shutil.rmtree(__temp__)
-xbmcvfs.mkdirs(__temp__)
+ARCHIVE_EXTENSIONS = {
+  '.zip',
+  '.cbz',
+  '.rar',
+  '.cbr'
+}
 
-#sys.path.append (__resource__)
+LANGUAGES = {
+  "albán"    : "Albanian",
+  "arab"     : "Arabic",
+  "bolgár"   : "Bulgarian",
+  "kínai"    : "Chinese",
+  "horvát"   : "Croatian",
+  "cseh"     : "Czech",
+  "dán"      : "Danish",
+  "holland"  : "Dutch",
+  "angol"    : "English",
+  "észt"     : "Estonian",
+  "finn"     : "Finnish",
+  "francia"  : "French",
+  "német"    : "German",
+  "görög"    : "Greek",
+  "héber"    : "Hebrew",
+  "hindi"    : "Hindi",
+  "magyar"   : "Hungarian",
+  "olasz"    : "Italian",
+  "japán"    : "Japanese",
+  "koreai"   : "Korean",
+  "lett"     : "Latvian",
+  "litván"   : "Lithuanian",
+  "macedón"  : "Macedonian",
+  "norvég"   : "Norwegian",
+  "lengyel"  : "Polish",
+  "portugál" : "Portuguese",
+  "román"    : "Romanian",
+  "orosz"    : "Russian",
+  "szerb"    : "Serbian",
+  "szlovák"  : "Slovak",
+  "szlovén"  : "Slovenian",
+  "spanyol"  : "Spanish",
+  "svéd"     : "Swedish",
+  "török"    : "Turkish",
+}
+
+def recreateDir(path):
+  if xbmcvfs.exists(path):
+    shutil.rmtree(path)
+  xbmcvfs.mkdirs(path)
 
 def normalizeString(str):
-  return unicodedata.normalize(
-         'NFKD', unicode(unicode(str, 'utf-8'))
-         ).encode('ascii','ignore')
+  return unicodedata.normalize('NFKD', unicode(unicode(str, 'utf-8'))).encode('ascii','ignore')
 
 def lang_hun2eng(hunlang):
-  languages = {
-    "albán"    : "Albanian",
-    "arab"     : "Arabic",
-    "bolgár"   : "Bulgarian",
-    "kínai"    : "Chinese",
-    "horvát"   : "Croatian",
-    "cseh"     : "Czech",
-    "dán"      : "Danish",
-    "holland"  : "Dutch",
-    "angol"    : "English",
-    "észt"     : "Estonian",
-    "finn"     : "Finnish",
-    "francia"  : "French",
-    "német"    : "German",
-    "görög"    : "Greek",
-    "héber"    : "Hebrew",
-    "hindi"    : "Hindi",
-    "magyar"   : "Hungarian",
-    "olasz"    : "Italian",
-    "japán"    : "Japanese",
-    "koreai"   : "Korean",
-    "lett"     : "Latvian",
-    "litván"   : "Lithuanian",
-    "macedón"  : "Macedonian",
-    "norvég"   : "Norwegian",
-    "lengyel"  : "Polish",
-    "portugál" : "Portuguese",
-    "román"    : "Romanian",
-    "orosz"    : "Russian",
-    "szerb"    : "Serbian",
-    "szlovák"  : "Slovak",
-    "szlovén"  : "Slovenian",
-    "spanyol"  : "Spanish",
-    "svéd"     : "Swedish",
-    "török"    : "Turkish",
-  }
-  return languages[ hunlang.lower() ] 
+  return LANGUAGES[ hunlang.lower() ] 
 
+def log(msg, level):
+  xbmc.log((u"### [%s] - %s" % (__scriptname__ ,msg,)).encode('utf-8'), level = level) 
 
-def log(msg):
-  xbmc.log((u"### [%s] - %s" % (__scriptname__ ,msg,)).encode('utf-8'),level=xbmc.LOGNOTICE ) 
+def infolog(msg):
+  log(msg, xbmc.LOGNOTICE)
 
 def errorlog(msg):
-  xbmc.log((u"### [%s] - %s" % (__scriptname__ ,msg,)).encode('utf-8'),level=xbmc.LOGERROR )
+  log(msg, xbmc.LOGERROR)
 
 def debuglog(msg):
-  xbmc.log((u"### [%s] - %s" % (__scriptname__ ,msg,)).encode('utf-8'),level=xbmc.LOGDEBUG )
+  log(msg,xbmc.LOGDEBUG)
+  #log(msg, xbmc.LOGNOTICE)
 
 def queryData(params):
   r=requests.get(BASE_URL,params=params, headers=HEADERS)
-  log(r.url)
+  debuglog(r.url)
   try:
     return r.json()
   except ValueError as e:
     errorlog(e.message)
     return None
 
-def getId(term):
-  params = {'action': 'autoname', 'nyelv': 'Angol', 'term': term}
-  data = queryData(params)
-  if data:
-    return data[0]['ID']
-  else:
-    return None
+def notification(id):
+  xbmc.executebuiltin(u'Notification(%s,%s,%s,%s)' % (
+      __scriptname__, 
+      __language__(id), 
+      2000, 
+      os.path.join(__cwd__,"icon.png")
+    )
+  )
+
+def getId(item):
+  ret = None
+  params = {'action': 'autoname', 'nyelv': 'Angol', 'term': item['tvshow']}
+  datas = queryData(params)
+  if datas:
+    if item['year']:
+      year = str(item['year'])
+      for data in datas:
+        if year in data['name']:
+          ret = data['ID']
+          break
+    else:
+      ret = datas[0]['ID']
+
+  if ret and '-100' in ret:
+   ret=None
+  
+  return ret
 
 def convert(item): 
   ret = {'filename': item['fnev'], 
@@ -143,16 +175,18 @@ def convert(item):
          'id' : item['felirat'],
          'uploader': item['feltolto'],
          'hearing' : False}
+
   ret['language_eng'] = lang_hun2eng(item['language'])
   score = int(item['pontos_talalat'], 2)
   ret['rating'] = str(score*5/7)
   ret['sync'] = score >= 6
-  ret['hearing']=False
   ret['flag'] = xbmc.convertLanguage(ret['language_eng'],xbmc.ISO_639_1)
+  ret['seasonpack'] = bool(item['evadpakk'])
+
   return ret
 
 def setParamIfFilenameContains(data, params, paramname, items):
-  compare=data['filename'].lower()
+  compare = data['filename'].lower()
   for item in items:
     if item.lower() in compare:
       params[paramname]=item
@@ -160,7 +194,7 @@ def setParamIfFilenameContains(data, params, paramname, items):
   return None
 
 def search_subtitles(item):
-  id=getId(item['tvshow'])
+  id = getId(item)
   if not id:
     debuglog("No id found for %s" % item['tvshow'])
     return None
@@ -181,19 +215,21 @@ def search_subtitles(item):
   for st in data.values():
     searchlist.append(convert(st))
 
-  searchlist.sort(key=lambda k: k['rating'], reverse=True)
+  searchlist.sort(key = lambda k: k['rating'], reverse = True)
   return searchlist
 
 def Search(item): 
+  debuglog(item)
   subtitles_list = search_subtitles(item) 
 
   if subtitles_list:
     for it in subtitles_list:
+      #label="%s | %s | %s"%(it['name'], it['filename'], it['uploader'])
       label="%s [%s]"%(it['filename'], it['uploader'])
       listitem = xbmcgui.ListItem(label=it["language_eng"],
-            label2="%s [%s]"%(it['filename'], it['uploader']),
-            iconImage=it["rating"],
-            thumbnailImage= it["flag"] 
+            label2 = label,
+            iconImage = it["rating"],
+            thumbnailImage = it["flag"] 
             )
       listitem.setProperty( "sync", ("false", "true")[it["sync"]] )
       listitem.setProperty( "hearing_imp", ("false", "true")[it.get("hearing", False)] )
@@ -203,24 +239,82 @@ def Search(item):
       
       xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]),url=url,listitem=listitem,isFolder=False)
 
+def isArchive(filename):
+  if filename:
+    for ext in ARCHIVE_EXTENSIONS:
+      if filename.endswith(ext):
+        return True
+  return False
 
+def extract(archive):
+  basename = os.path.basename(archive).replace('.','_')
+  extracted = os.path.join(__temp__,basename)
+  xbmc.executebuiltin(('XBMC.Extract("%s","%s")' % (archive,extracted)).encode('utf-8'), True)
+  return extracted
 
 def download_file(item):
-  localfile=os.path.join(__temp__,item['filename'].decode("utf-8"))
-  params={'action':'letolt', 'felirat': item['id']}
+  localfile = os.path.join(__temp__,item['filename'].decode("utf-8"))
+  params = {'action':'letolt', 'felirat': item['id']}
   r = requests.get(BASE_URL, params=params, headers=HEADERS, stream=True)
+  debuglog(r.url)
+
   with open(localfile, 'wb') as fd:
     for chunk in r.iter_content(chunk_size=1024):
       fd.write(chunk)
     fd.flush()
+
   return localfile
 
+def isMatch(item, filename):
+  pattern = r'^.*S?(?P<season>\d+)([x_-]|\.)+E?(?P<episode>\d+).*$'
+  match = re.search(pattern, filename, re.I)
+  if match:
+    season = int(item['season'])
+    episod = int(item['episode']) 
+    fs = int(match.group('season'))
+    fe = int(match.group('episode'))
+    if season == fs and episod == fe:
+     return True
+
+  return False
+
 def Download(item):
-  subtitle = download_file(item)
-  listitem = xbmcgui.ListItem(label=subtitle)
-  xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]),url=subtitle,listitem=listitem,isFolder=False)
+  debuglog(item)
+  subtitle = None
+  downloaded = download_file(item)
   
-   
+  if isArchive(downloaded):
+    extracted = extract(downloaded)
+    for file in xbmcvfs.listdir(extracted)[1]:
+      file = os.path.join(extracted, file.decode('utf-8'))
+      filename=os.path.basename(file)
+      if isMatch(item, filename):
+        subtitle=file
+        break
+  else: 
+    subtitle=downloaded
+
+  if subtitle:
+    listitem = xbmcgui.ListItem(label=subtitle)
+    xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]),url=subtitle,listitem=listitem,isFolder=False)
+    notification(32501)
+
+def setupTvShowAndSeasonAndEpisode(item):
+  tvshow = normalizeString(xbmc.getInfoLabel("VideoPlayer.TVshowtitle")) 
+  if tvshow:
+    item['tvshow'] = tvshow
+    item['season']  = str(xbmc.getInfoLabel("VideoPlayer.Season"))
+    item['episode'] = str(xbmc.getInfoLabel("VideoPlayer.Episode"))
+  else :
+    title = xbmc.getCleanMovieTitle(item['file_original_path'])[0];
+    pattern = r'^(?P<title>.+)S(?P<season>\d+)E(?P<episode>\d+)$'
+    match = re.search(pattern, title, re.I)
+    item['tvshow'] = match.group('title').strip()
+    item['season'] = match.group('season')
+    item['episode'] = match.group('episode')
+  
+  return item
+  
 def get_params(string=""):
   param=[]
   if string == "":
@@ -242,30 +336,32 @@ def get_params(string=""):
           
   return param
 
+
+
+recreateDir(__temp__)
 params = get_params()
 
+debuglog(params)
+
 if params['action'] == 'search':
-  log("action 'search' called")
+  debuglog("action 'search' called")
   item = {}
   item['temp']    = False
   item['rar']     = False
   item['stack']   = False
   item['year']    = xbmc.getInfoLabel("VideoPlayer.Year")   # Year
-  item['season']  = str(xbmc.getInfoLabel("VideoPlayer.Season"))       # Season
-  item['episode'] = str(xbmc.getInfoLabel("VideoPlayer.Episode"))      # Episode
-  item['tvshow']  = normalizeString(xbmc.getInfoLabel("VideoPlayer.TVshowtitle"))  # Show
   item['title']   = normalizeString(xbmc.getInfoLabel("VideoPlayer.OriginalTitle"))# try to get original title
   item['file_original_path'] = urllib.unquote(xbmc.Player().getPlayingFile().decode('utf-8'))# Full path of a playing file
-  item['3let_language']      = [] #['scc','eng']
-  
+  item['languages']      = [] #['scc','eng']
+
+  item=setupTvShowAndSeasonAndEpisode(item)
+
   for lang in urllib.unquote(params['languages']).decode('utf-8').split(","):
-    clang = xbmc.convertLanguage(lang,xbmc.ISO_639_2);
-    log("lang: %s, clang: %s" % (lang, clang))
-    item['3let_language'].append(lang)
+    item['languages'].append(lang)
   
   if item['title'] == "":
-    log("VideoPlayer.OriginalTitle not found")
-    item['title']  = normalizeString(xbmc.getInfoLabel("VideoPlayer.Title"))      # no original title, get just Title
+    debuglog("VideoPlayer.OriginalTitle not found")
+    item['title']  = normalizeString(xbmc.getInfoLabel("VideoPlayer.Title"))
     
   if item['episode'].lower().find("s") > -1:     # Check if season is "Special"
     item['season'] = "0"              #
@@ -285,36 +381,18 @@ if params['action'] == 'search':
 
   item['filename']=os.path.basename(item['file_original_path'])
 
-  if not item['tvshow'] :
-     title = xbmc.getCleanMovieTitle(item['file_original_path'])[0];
-     pattern = r'^(?P<title>.+)S(?P<season>\d+)E(?P<episode>\d+)$'
-     match = re.search(pattern,title, re.I)
-     item['tvshow']=match.group('title').strip()
-     item['season']=match.group('season')
-     item['episode']=match.group('episode')
-  
   Search(item)
 	
 elif params['action'] == 'download':
-  item={'id': params['id'], 'filename':params['filename']}
+  item={'id': params['id'], 'filename' : params['filename']}
+  item=setupTvShowAndSeasonAndEpisode(item)
   Download(item)
   
-
 elif params['action'] == 'manualsearch':
-  xbmc.executebuiltin(u'Notification(%s,%s,2000,%s)' % 
-     (__scriptname__,
-      __language__(32004),
-      os.path.join(__cwd__,"icon.png")
-    )
-           )
+  notification(32502)
   
 xbmcplugin.endOfDirectory(int(sys.argv[1]))
-  
-  
-  
-  
-  
-  
+
   
   
   

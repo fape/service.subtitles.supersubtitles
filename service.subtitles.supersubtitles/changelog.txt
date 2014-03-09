@@ -1,3 +1,11 @@
+0.0.3
+- use year for get tvshow id
+- archive file handling
+  - extract into a folder
+  - search subtitle extracted infolder
+    - working together with season pack archives
+- add some notification
+
 0.0.2
 - first working edition
 - fully rewrited
