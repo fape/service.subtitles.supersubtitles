@@ -1,3 +1,7 @@
+0.0.5
+- add missing requests2 dependency
+- fix original path issue
+
 0.0.4
 - filter languages
 - reformat by PyCharm

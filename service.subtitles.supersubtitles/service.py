@@ -8,8 +8,7 @@ import unicodedata
 import os.path
 import re
 
-import requests
-
+import requests2
 import xbmc
 import xbmcvfs
 import xbmcaddon
@@ -143,7 +142,7 @@ def debuglog(msg):
 
 
 def query_data(params):
-    r = requests.get(BASE_URL, params=params, headers=HEADERS)
+    r = requests2.get(BASE_URL, params=params, headers=HEADERS)
     debuglog(r.url)
     try:
         return r.json()
@@ -272,7 +271,7 @@ def extract(archive):
 def download_file(item):
     localfile = os.path.join(__temp__, item['filename'].decode("utf-8"))
     qparams = {'action': 'letolt', 'felirat': item['id']}
-    r = requests.get(BASE_URL, params=qparams, headers=HEADERS, stream=True)
+    r = requests2.get(BASE_URL, params=qparams, headers=HEADERS, stream=True)
     debuglog(r.url)
 
     with open(localfile, 'wb') as fd:
@@ -326,12 +325,29 @@ def setup_tvshow_data(item):
         item['season'] = str(xbmc.getInfoLabel("VideoPlayer.Season"))
         item['episode'] = str(xbmc.getInfoLabel("VideoPlayer.Episode"))
     else:
-        title = xbmc.getCleanMovieTitle(item['file_original_path'])[0];
+        title = xbmc.getCleanMovieTitle(item['file_original_path'])[0]
         pattern = r'^(?P<title>.+)S(?P<season>\d+)E(?P<episode>\d+)$'
         match = re.search(pattern, title, re.I)
         item['tvshow'] = match.group('title').strip()
         item['season'] = match.group('season')
         item['episode'] = match.group('episode')
+
+    return item
+
+
+def setup_path(item):
+    item['file_original_path'] = urllib.unquote(xbmc.Player().getPlayingFile().decode('utf-8'))
+    if item['file_original_path'].find("http") > -1:
+        item['temp'] = True
+
+    elif item['file_original_path'].find("rar://") > -1:
+        item['rar'] = True
+        item['file_original_path'] = os.path.dirname(item['file_original_path'][6:])
+
+    elif item['file_original_path'].find("stack://") > -1:
+        item['stack'] = True
+        stackPath = item['file_original_path'].split(" , ")
+        item['file_original_path'] = stackPath[0][8:]
 
     return item
 
@@ -367,10 +383,7 @@ if params['action'] == 'search':
     debuglog("action 'search' called")
     item = {'temp': False, 'rar': False, 'stack': False, 'year': xbmc.getInfoLabel("VideoPlayer.Year"),
             'title': normalize_string(xbmc.getInfoLabel("VideoPlayer.OriginalTitle")),
-            'file_original_path': urllib.unquote(
-                xbmc.Player().getPlayingFile().decode('utf-8')), 'languages': []}
-
-    item = setup_tvshow_data(item)
+            'languages': []}
 
     for lang in urllib.unquote(params['languages']).decode('utf-8').split(","):
         item['languages'].append(lang)
@@ -378,30 +391,20 @@ if params['action'] == 'search':
     if item['title'] == "":
         debuglog("VideoPlayer.OriginalTitle not found")
         item['title'] = normalize_string(xbmc.getInfoLabel("VideoPlayer.Title"))
+    setup_path(item)
+    item['filename'] = os.path.basename(item['file_original_path'])
+
+    item = setup_tvshow_data(item)
 
     if item['episode'].lower().find("s") > -1:  # Check if season is "Special"
         item['season'] = "0"  #
         item['episode'] = item['episode'][-1:]
 
-    if item['file_original_path'].find("http") > -1:
-        item['temp'] = True
-
-    elif item['file_original_path'].find("rar://") > -1:
-        item['rar'] = True
-        item['file_original_path'] = os.path.dirname(item['file_original_path'][6:])
-
-    elif item['file_original_path'].find("stack://") > -1:
-        item['stack'] = True
-        stackPath = item['file_original_path'].split(" , ")
-        item['file_original_path'] = stackPath[0][8:]
-
-    item['filename'] = os.path.basename(item['file_original_path'])
-
     search(item)
 
 elif params['action'] == 'download':
     item = {'id': params['id'], 'filename': params['filename']}
-    item = setup_tvshow_data(item)
+    item = setup_tvshow_data(setup_path(item))
     download(item)
 
 elif params['action'] == 'manualsearch':
