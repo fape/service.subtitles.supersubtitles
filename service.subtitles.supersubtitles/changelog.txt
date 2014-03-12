@@ -1,3 +1,7 @@
+0.0.4
+- filter languages
+- reformat by PyCharm
+
 0.0.3
 - use year for get tvshow id
 - archive file handling
