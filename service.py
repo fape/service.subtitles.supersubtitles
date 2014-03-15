@@ -8,7 +8,7 @@ import unicodedata
 import os.path
 import re
 
-import requests2
+import requests2 as _requests
 import xbmc
 import xbmcvfs
 import xbmcaddon
@@ -125,7 +125,7 @@ def lang_hun2eng(hunlang):
 
 
 def log(msg, level):
-    xbmc.log((u"### [%s] - %s" % (__scriptname__, msg,)).encode('utf-8'), level=level)
+    xbmc.log((u"### [%s] - %s" % (__scriptid__, msg,)).encode('utf-8'), level=level)
 
 
 def infolog(msg):
@@ -142,7 +142,7 @@ def debuglog(msg):
 
 
 def query_data(params):
-    r = requests2.get(BASE_URL, params=params, headers=HEADERS)
+    r = _requests.get(BASE_URL, params=params, headers=HEADERS)
     debuglog(r.url)
     try:
         return r.json()
@@ -271,7 +271,7 @@ def extract(archive):
 def download_file(item):
     localfile = os.path.join(__temp__, item['filename'].decode("utf-8"))
     qparams = {'action': 'letolt', 'felirat': item['id']}
-    r = requests2.get(BASE_URL, params=qparams, headers=HEADERS, stream=True)
+    r = _requests.get(BASE_URL, params=qparams, headers=HEADERS, stream=True)
     debuglog(r.url)
 
     with open(localfile, 'wb') as fd:
@@ -377,7 +377,9 @@ def get_params(string=""):
 recreate_dir(__temp__)
 params = get_params()
 
+debuglog("%s - %s" % (__scriptname__ , __version__))
 debuglog(params)
+
 
 if params['action'] == 'search':
     debuglog("action 'search' called")
@@ -411,4 +413,3 @@ elif params['action'] == 'manualsearch':
     notification(32502)
 
 xbmcplugin.endOfDirectory(int(sys.argv[1]))
-
