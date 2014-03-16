@@ -186,6 +186,7 @@ def convert(item):
            'uploader': item['feltolto'], 'hearing': False, 'language_eng': lang_hun2eng(item['language'])}
 
     score = int(item['pontos_talalat'], 2)
+    ret['score'] = score
     ret['rating'] = str(score * 5 / 7)
     ret['sync'] = score >= 6
     ret['flag'] = xbmc.convertLanguage(ret['language_eng'], xbmc.ISO_639_1)
@@ -202,6 +203,15 @@ def set_param_if_filename_contains(data, params, paramname, items):
             return item
     return None
 
+
+def remove_duplications(items):
+    ret = {}
+    for item in items:
+        new_item = ret.get(item['id'], item)
+        if item['score'] > new_item['score']:
+            new_item = item
+        ret[item['id']] = new_item
+    return ret.values()
 
 def search_subtitles(item):
     showid = get_showid(item)
@@ -227,6 +237,8 @@ def search_subtitles(item):
         if converted['language_eng'] in item['languages']:
             searchlist.append(converted)
 
+    searchlist = remove_duplications(searchlist)
+
     searchlist.sort(key=lambda k: k['rating'], reverse=True)
     return searchlist
 
@@ -239,13 +251,13 @@ def search(item):
         for it in subtitles_list:
             #label="%s | %s | %s"%(it['name'], it['filename'], it['uploader'])
             label = "%s [%s]" % (it['filename'], it['uploader'])
-            listitem = xbmcgui.ListItem(label=it["language_eng"],
+            listitem = xbmcgui.ListItem(label=it['language_eng'],
                                         label2=label,
-                                        iconImage=it["rating"],
-                                        thumbnailImage=it["flag"]
+                                        iconImage=it['rating'],
+                                        thumbnailImage=it['flag']
             )
-            listitem.setProperty("sync", ("false", "true")[it["sync"]])
-            listitem.setProperty("hearing_imp", ("false", "true")[it.get("hearing", False)])
+            listitem.setProperty('sync', ('false', 'true')[it['sync']])
+            listitem.setProperty('hearing_imp', ('false', 'true')[it.get('hearing', False)])
 
             qparams = {'action': 'download', 'id': it['id'], 'filename': it['filename']}
             url = "plugin://%s/?%s" % (__scriptid__, urllib.urlencode(qparams))
