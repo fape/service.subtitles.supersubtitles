@@ -231,8 +231,12 @@ def search_subtitles(item):
         debuglog("No subtitle found for %s" % item['tvshow'])
         return None
 
+    # convert dict to list
+    if type(data) is dict:
+        data = data.values()
+
     searchlist = []
-    for st in data.values():
+    for st in data:
         converted = convert(st)
         if converted['language_eng'] in item['languages']:
             searchlist.append(converted)
