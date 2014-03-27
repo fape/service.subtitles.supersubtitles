@@ -265,7 +265,7 @@ def search(item):
             listitem.setProperty('sync', ('false', 'true')[it['sync']])
             listitem.setProperty('hearing_imp', ('false', 'true')[it.get('hearing', False)])
 
-            qparams = {'action': 'download', 'actionsortorder': str(index), 'id': it['id'], 'filename': it['filename']}
+            qparams = {'action': 'download', 'actionsortorder': str(index).zfill(2), 'id': it['id'], 'filename': it['filename']}
             url = "plugin://%s/?%s" % (__scriptid__, urllib.urlencode(qparams))
 
             xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]), url=url, listitem=listitem, isFolder=False)
