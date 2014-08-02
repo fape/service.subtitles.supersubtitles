@@ -292,8 +292,7 @@ def search(item):
             label = "%s [%s]" % (it['filename'], it['uploader'])
 
             if it['seasonpack']:
-                label += ' (Season pack)'
-                debuglog(label)
+                label += (' (%s)' % (__language__(32503)))
 
             listitem = xbmcgui.ListItem(label=it['language_eng'],
                                         label2=label,
