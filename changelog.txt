@@ -1,3 +1,7 @@
+0.0.13
+- season pack handling
+- search and download improvements
+
 0.0.12
 - filename character encoding fix in url
 - more sophisticated exception handling
