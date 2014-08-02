@@ -207,15 +207,15 @@ def get_showid(item):
 
 
 def convert(item):
-    ret = {'filename': item['fnev'], 'name': item['nev'], 'language_hun': item['language'], 'id': item['felirat'],
-           'uploader': item['feltolto'], 'hearing': False, 'language_eng': lang_hun2eng(item['language'])}
+    ret = {'filename': item['fnev'], 'name': item['nev'].strip(), 'language_hun': item['language'], 'id': item['felirat'],
+           'uploader': item['feltolto'].strip(), 'hearing': False, 'language_eng': lang_hun2eng(item['language'])}
 
     score = int(item['pontos_talalat'], 2)
     ret['score'] = score
     ret['rating'] = str(score * 5 / 7)
     ret['sync'] = score >= 6
     ret['flag'] = xbmc.convertLanguage(ret['language_eng'], xbmc.ISO_639_1)
-    ret['seasonpack'] = bool(item['evadpakk'])
+    ret['seasonpack'] = item['evadpakk'] == '1'
 
     return ret
 
@@ -239,6 +239,14 @@ def remove_duplications(items):
     return ret.values()
 
 
+def convert_and_filter(items, episode):
+    data = filter(lambda x: x['ep'] == item['episode'] or x['evadpakk'] == '1', items)
+    data = map(convert, data)
+    data = filter(lambda x: x['language_eng'] in item['languages'], data)
+    data = remove_duplications(data)
+    return data
+
+
 def search_subtitles(item):
     if not item['season'] and not item['episode']:
         debuglog("No season or episode info found for %s" % item['tvshow'])
@@ -249,7 +257,8 @@ def search_subtitles(item):
         debuglog("No id found for %s" % item['tvshow'])
         return None
 
-    qparams = {'action': 'xbmc', 'sid': showid, 'ev': item['season'], 'rtol': item['episode']};
+    #qparams = {'action': 'xbmc', 'sid': showid, 'ev': item['season'], 'rtol': item['episode']};
+    qparams = {'action': 'xbmc', 'sid': showid, 'ev': item['season']}
 
     set_param_if_filename_contains(item, qparams, 'relj', TAGS)
     set_param_if_filename_contains(item, qparams, 'relf', QUALITIES)
@@ -265,15 +274,9 @@ def search_subtitles(item):
     if type(data) is dict:
         data = data.values()
 
-    searchlist = []
-    for st in data:
-        converted = convert(st)
-        if converted['language_eng'] in item['languages']:
-            searchlist.append(converted)
+    searchlist = convert_and_filter(data, item['episode'])
 
-    searchlist = remove_duplications(searchlist)
-
-    searchlist.sort(key=lambda k: (k['score'], k['language_eng']), reverse=True)
+    searchlist.sort(key=lambda x: (x['score'], x['language_eng']), reverse=True)
     return searchlist
 
 
@@ -287,6 +290,11 @@ def search(item):
             index += 1
             #label="%s | %s | %s"%(it['name'], it['filename'], it['uploader'])
             label = "%s [%s]" % (it['filename'], it['uploader'])
+
+            if it['seasonpack']:
+                label += ' (Season pack)'
+                debuglog(label)
+
             listitem = xbmcgui.ListItem(label=it['language_eng'],
                                         label2=label,
                                         iconImage=it['rating'],
