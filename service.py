@@ -322,11 +322,18 @@ def extract(archive):
     basename = os.path.basename(archive).replace('.', '_')
     extracted = os.path.join(__temp__, basename)
     xbmc.executebuiltin(('XBMC.Extract("%s","%s")' % (archive, extracted)).encode('utf-8'), True)
-    return extracted
+
+    if xbmcvfs.exists(extracted):
+        return extracted
+    else:
+        errorlog('Error while extracting %s' % archive)
+        return None
+
 
 
 def download_file(item):
-    localfile = os.path.join(__temp__, item['filename'].decode("utf-8"))
+    filename = urllib.unquote_plus(item['filename'].decode("utf-8")).replace(' ', '_')
+    localfile = os.path.join(__temp__, filename)
     qparams = {'action': 'letolt', 'felirat': item['id']}
 
     response = send_request(qparams)
@@ -354,19 +361,34 @@ def is_match(item, filename):
     return False
 
 
+def recursive_search(path):
+    (dirs, files) = xbmcvfs.listdir(path)
+
+    if files:
+        for file in files:
+            file = os.path.join(path, file.decode('utf-8'))
+            filename = os.path.basename(file)
+            if is_match(item, filename):
+                return file
+
+    if dirs:
+        for dir in dirs:
+            file = recursive_search(os.path.join(path, dir.decode('utf-8')))
+            if file:
+                return file
+
+    return None
+
 def download(item):
     debuglog(item)
     subtitle = None
     downloaded = download_file(item)
 
     if is_archive(downloaded):
+        debuglog('Downloaded file is an archive')
         extracted = extract(downloaded)
-        for file in xbmcvfs.listdir(extracted)[1]:
-            file = os.path.join(extracted, file.decode('utf-8'))
-            filename = os.path.basename(file)
-            if is_match(item, filename):
-                subtitle = file
-                break
+        if extracted:
+            subtitle = recursive_search(extracted)
     else:
         subtitle = downloaded
 
