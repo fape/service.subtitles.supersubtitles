@@ -276,7 +276,8 @@ def search_subtitles(item):
 
     searchlist = convert_and_filter(data, item['episode'])
 
-    searchlist.sort(key=lambda x: (x['score'], x['language_eng']), reverse=True)
+    searchlist.sort(key=lambda x: (x['score'], x['language_eng'] == item['preferredlanguage'], x['language_eng']),
+                    reverse=True)
     return searchlist
 
 
@@ -480,7 +481,7 @@ if params['action'] == 'search':
     debuglog("action 'search' called")
     item = {'temp': False, 'rar': False, 'stack': False, 'year': xbmc.getInfoLabel("VideoPlayer.Year"),
             'title': normalize_string(xbmc.getInfoLabel("VideoPlayer.OriginalTitle")),
-            'languages': []}
+            'languages': [], 'preferredlanguage': params.get('preferredlanguage')}
 
     for lang in urllib.unquote(params['languages']).decode('utf-8').split(","):
         item['languages'].append(lang)
