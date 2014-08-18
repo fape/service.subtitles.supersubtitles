@@ -240,7 +240,7 @@ def remove_duplications(items):
 
 
 def convert_and_filter(items, episode):
-    data = filter(lambda x: x['ep'] == item['episode'] or x['evadpakk'] == '1', items)
+    data = filter(lambda x: int(x['ep']) == int(item['episode']) or x['evadpakk'] == '1', items)
     data = map(convert, data)
     data = filter(lambda x: x['language_eng'] in item['languages'], data)
     data = remove_duplications(data)
@@ -262,7 +262,7 @@ def search_subtitles(item):
 
     set_param_if_filename_contains(item, qparams, 'relj', TAGS)
     set_param_if_filename_contains(item, qparams, 'relf', QUALITIES)
-    set_param_if_filename_contains(item, qparams, 'relr', RELEASERS)
+    releaser = set_param_if_filename_contains(item, qparams, 'relr', RELEASERS)
 
     data = query_data(qparams)
 
@@ -276,7 +276,8 @@ def search_subtitles(item):
 
     searchlist = convert_and_filter(data, item['episode'])
 
-    searchlist.sort(key=lambda x: (x['score'], x['language_eng'] == item['preferredlanguage'], x['language_eng']),
+    searchlist.sort(key=lambda x: (x['score'], x['language_eng'] == item['preferredlanguage'], x['language_eng'],
+                                   releaser.lower() in x['filename'].lower() if releaser else x['filename']),
                     reverse=True)
     return searchlist
 
@@ -478,7 +479,6 @@ params = get_params()
 debuglog(params)
 
 if params['action'] == 'search':
-    debuglog("action 'search' called")
     item = {'temp': False, 'rar': False, 'stack': False, 'year': xbmc.getInfoLabel("VideoPlayer.Year"),
             'title': normalize_string(xbmc.getInfoLabel("VideoPlayer.OriginalTitle")),
             'languages': [], 'preferredlanguage': params.get('preferredlanguage')}
