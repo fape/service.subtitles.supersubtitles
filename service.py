@@ -39,7 +39,7 @@ __temp__ = xbmc.translatePath(os.path.join(__profile__, 'temp')).decode("utf-8")
 BASE_URL = 'http://www.feliratok.info/index.php'
 
 TAGS = [
-    'WEB\-DL',
+    'WEB-DL',
     'PROPER',
     'REPACK'
 ]
@@ -186,22 +186,28 @@ def notification(id):
     )
 
 
-def get_showid(item):
-    ret = None
-    qparams = {'action': 'autoname', 'nyelv': '0', 'term': item['tvshow']}
-    datas = query_data(qparams)
-    if datas:
-        if item['year']:
-            year = str(item['year'])
-            for data in datas:
-                if year in data['name']:
-                    ret = data['ID']
-                    break
-        else:
-            ret = datas[0]['ID']
+def get_showids(item):
+    ret = []
+    pattern = r'^(?P<term>[^\(]*)(\s+\((\w{2,3})\))?$'
+    match = re.search(pattern, item['tvshow'], re.I)
+    if match:
+        term = match.group('term')
+        qparams = {'action': 'autoname', 'nyelv': '0', 'term': term}
+        datas = query_data(qparams)
+        if datas:
+            if item['year']:
+                year = str(item['year'])
+                for data in datas:
+                    if year in data['name']:
+                        ret.append(data['ID'])
+                        break
+            else:
+                ret = map(lambda x: x['ID'], datas)
 
-    if ret and '-100' in ret:
-        ret = None
+        if '-100' in ret:
+            ret = []
+
+    ret.sort(reverse=True)
 
     return ret
 
@@ -247,16 +253,7 @@ def convert_and_filter(items, episode):
     return data
 
 
-def search_subtitles(item):
-    if not item['season'] and not item['episode']:
-        debuglog("No season or episode info found for %s" % item['tvshow'])
-        return None
-
-    showid = get_showid(item)
-    if not showid:
-        debuglog("No id found for %s" % item['tvshow'])
-        return None
-
+def search_subtitles_for_show(item, showid):
     #qparams = {'action': 'xbmc', 'sid': showid, 'ev': item['season'], 'rtol': item['episode']};
     qparams = {'action': 'xbmc', 'sid': showid, 'ev': item['season']}
 
@@ -279,6 +276,26 @@ def search_subtitles(item):
     searchlist.sort(key=lambda x: (x['score'], x['language_eng'] == item['preferredlanguage'], x['language_eng'],
                                    releaser.lower() in x['filename'].lower() if releaser else x['filename']),
                     reverse=True)
+
+    return searchlist
+
+
+def search_subtitles(item):
+    if not item['season'] and not item['episode']:
+        debuglog("No season or episode info found for %s" % item['tvshow'])
+        return None
+
+    showids = get_showids(item)
+    if not showids:
+        debuglog("No ids found for %s" % item['tvshow'])
+        return None
+
+    searchlist = []
+    for showid in showids:
+        subtitles = search_subtitles_for_show(item, showid)
+        if subtitles:
+            searchlist.extend(subtitles)
+
     return searchlist
 
 
