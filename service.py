@@ -413,7 +413,7 @@ def download(item):
     if subtitle:
         listitem = xbmcgui.ListItem(label=subtitle)
         xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]), url=subtitle, listitem=listitem, isFolder=False)
-        notification(32501)
+        #notification(32501)
 
 
 def setup_tvshow_data(item):
