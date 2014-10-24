@@ -348,7 +348,6 @@ def extract(archive):
         return None
 
 
-
 def download_file(item):
     filename = urllib.unquote_plus(item['filename'].decode("utf-8")).replace(' ', '_')
     localfile = os.path.join(__temp__, filename)
@@ -366,7 +365,7 @@ def download_file(item):
 
 
 def is_match(item, filename):
-    pattern = r'^.*S?(?P<season>\d+)([x_-]|\.)+E?(?P<episode>\d+).*$'
+    pattern = r'^.*?S?(?P<season>\d+)([x_-]|\.)*E?(?P<episode>\d+).*$'
     match = re.search(pattern, filename, re.I)
     if match:
         season = int(item['season'])
@@ -396,6 +395,7 @@ def recursive_search(path):
                 return file
 
     return None
+
 
 def download(item):
     debuglog(item)
