@@ -119,8 +119,10 @@ LANGUAGES = {
 
 def recreate_dir(path):
     if xbmcvfs.exists(path):
-        shutil.rmtree(path)
-    xbmcvfs.mkdirs(path)
+        shutil.rmtree(path, ignore_errors=True)
+    
+    if not xbmcvfs.exists(path):
+        xbmcvfs.mkdirs(path)
 
 
 def normalize_string(str):
