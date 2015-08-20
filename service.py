@@ -119,8 +119,14 @@ LANGUAGES = {
 
 def recreate_dir(path):
     if xbmcvfs.exists(path):
-        shutil.rmtree(path, ignore_errors=True)
-    
+        try:
+            if sys.getfilesystemencoding():
+                shutil.rmtree(__temp__.encode(sys.getfilesystemencoding()), ignore_errors=True)
+            else:
+                shutil.rmtree(__temp__, ignore_errors=True)
+        except Exception as e:
+            errorlog("Exception while delete %s: %s" % (__temp__, e.message))
+
     if not xbmcvfs.exists(path):
         xbmcvfs.mkdirs(path)
 
