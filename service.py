@@ -139,7 +139,7 @@ def normalize_string(str):
 
 
 def lang_hun2eng(hunlang):
-    return LANGUAGES[hunlang.lower()]
+    return LANGUAGES[hunlang.encode("utf-8").lower()]
 
 
 def log(msg, level):
