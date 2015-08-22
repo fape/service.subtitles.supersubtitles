@@ -379,9 +379,9 @@ def download_file(item):
 
 
 def is_match(item, filename):
-    pattern = r'^.*?S?(?P<season>\d+)([x_-]|\.)*E?(?P<episode>\d+).*$'
-    match = re.search(pattern, filename, re.I)
-    if match:
+    pattern = r'S?(?P<season>\d+)([x_-]|\.)*E?(?P<episode>\d+)'
+    regexp = re.compile(pattern,  re.IGNORECASE)
+    for match in regexp.finditer(filename):
         season = int(item['season'])
         episode = int(item['episode'])
         fs = int(match.group('season'))
@@ -425,6 +425,7 @@ def download(item):
         subtitle = downloaded
 
     if subtitle:
+        debuglog("Downloaded subtitle: %s" % subtitle)
         listitem = xbmcgui.ListItem(label=subtitle)
         xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]), url=subtitle, listitem=listitem, isFolder=False)
         #notification(32501)
