@@ -67,7 +67,11 @@ RELEASERS = [
     'LOL',
     'REMARKABLE',
     'ORENJI',
-    'TLA'
+    'TLA',
+
+    '0SEC',
+    'FLEET',
+    'KILLERS'
 ]
 
 HEADERS = {'User-Agent': 'xbmc subtitle plugin'}
