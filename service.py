@@ -308,11 +308,16 @@ def search_subtitles(item):
         debuglog("No ids found for %s" % item['tvshow'])
         return None
 
-    searchlist = []
+    searchdict = {}
     for showid in showids:
         subtitles = search_subtitles_for_show(item, showid)
         if subtitles:
-            searchlist.extend(subtitles)
+            avg = sum(x['score'] for x in subtitles) / float(len(subtitles))
+            searchdict[(avg, showid)] = subtitles
+
+    searchlist = []
+    for key in sorted(searchdict, reverse=True):
+        searchlist.extend(searchdict[key])
 
     return searchlist
 
