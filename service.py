@@ -298,7 +298,7 @@ def search_subtitles_for_show(item, showid):
     return searchlist
 
 
-def search_subtitles(item):
+def search_subtitles(item, recursive=True):
     if not item['season'] and not item['episode']:
         debuglog("No season or episode info found for %s" % item['tvshow'])
         return None
@@ -306,7 +306,11 @@ def search_subtitles(item):
     showids = get_showids(item)
     if not showids:
         debuglog("No ids found for %s" % item['tvshow'])
-        return None
+        if recursive and normalize_string(xbmc.getInfoLabel("VideoPlayer.TVshowtitle")):
+            debuglog("Second try: search by filename")
+            return search_subtitles(setup_tvshow_data(item, False), False)
+        else:
+            return None
 
     searchdict = {}
     for showid in showids:
@@ -467,9 +471,9 @@ def clean_title(item):
     return None if title_match else infos
 
 
-def setup_tvshow_data(item):
+def setup_tvshow_data(item, tryVideoPlayer=True):
     tvshow = normalize_string(xbmc.getInfoLabel("VideoPlayer.TVshowtitle"))
-    if tvshow:
+    if tryVideoPlayer and tvshow:
         item['tvshow'] = tvshow
         item['season'] = str(xbmc.getInfoLabel("VideoPlayer.Season"))
         item['episode'] = str(xbmc.getInfoLabel("VideoPlayer.Episode"))
