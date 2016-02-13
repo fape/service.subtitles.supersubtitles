@@ -126,17 +126,17 @@ def recreate_dir(path):
         try:
             fse = sys.getfilesystemencoding()
             if fse:
-                debuglog("with file system encoding: %s" % fse)
-                shutil.rmtree(__temp__.encode(fse), ignore_errors=True)
+                debuglog("Remove %s directory with file system encoding: %s" % (path, fse))
+                shutil.rmtree(path.encode(fse), ignore_errors=True)
             else:
-                debuglog("with out file system encoding")
-                shutil.rmtree(__temp__, ignore_errors=True)
+                debuglog("Remove %s directory with out file system encoding" % path)
+                shutil.rmtree(path, ignore_errors=True)
         except Exception as e:
-            errorlog("Exception while delete %s: %s" % (__temp__, e.message))
+            errorlog("Exception while delete %s: %s" % (path, e.message))
 
     if not xbmcvfs.exists(path):
+        debuglog("Create %s directory" % path)
         xbmcvfs.mkdirs(path)
-
 
 def normalize_string(str):
     return unicodedata.normalize('NFKD', unicode(unicode(str, 'utf-8'))).encode('ascii', 'ignore')
@@ -366,6 +366,7 @@ def is_archive(filename):
 def extract(archive):
     basename = os.path.basename(archive).replace('.', '_').decode('utf-8')
     extracted = os.path.join(__temp__, basename, '')
+    debuglog('Extract %s to %s' % (archive, extracted))
     xbmc.executebuiltin(('XBMC.Extract("%s","%s")' % (archive, extracted)).encode('utf-8'), True)
 
     if xbmcvfs.exists(extracted):
@@ -430,11 +431,12 @@ def download(item):
     downloaded = download_file(item)
 
     if is_archive(downloaded):
-        debuglog('Downloaded file is an archive')
+        debuglog('%s downloaded file is an archive' % downloaded)
         extracted = extract(downloaded)
         if extracted:
             subtitle = recursive_search(extracted)
             if not subtitle:
+                debuglog("No subtitle found by search. Open dialog from %s" % extracted)
                 dialog = xbmcgui.Dialog()
                 selected = dialog.browseSingle(1, __language__(32504), 'files', '.srt|.sub|.ssa|.smi|',
                                                False, False, extracted)
