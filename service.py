@@ -434,6 +434,12 @@ def download(item):
         extracted = extract(downloaded)
         if extracted:
             subtitle = recursive_search(extracted)
+            if not subtitle:
+                dialog = xbmcgui.Dialog()
+                selected = dialog.browseSingle(1, __language__(32504), 'files', '.srt|.sub|.ssa|.smi|',
+                                               False, False, extracted)
+                if selected != extracted:
+                    subtitle = selected
     else:
         subtitle = downloaded
 
