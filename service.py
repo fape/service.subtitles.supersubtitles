@@ -71,7 +71,11 @@ RELEASERS = [
 
     '0SEC',
     'FLEET',
-    'KILLERS'
+    'KILLERS',
+
+    'AVS',
+    'BATV'
+    'SVA'
 ]
 
 HEADERS = {'User-Agent': 'xbmc subtitle plugin'}
