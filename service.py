@@ -238,10 +238,10 @@ def convert(item):
     ret = {'filename': item['fnev'], 'name': item['nev'].strip(), 'language_hun': item['language'], 'id': item['felirat'],
            'uploader': item['feltolto'].strip(), 'hearing': False, 'language_eng': lang_hun2eng(item['language'])}
 
-    score = int(item['pontos_talalat'], 2)
+    score = item['pontos_talalat'].count("1")
     ret['score'] = score
-    ret['rating'] = str(score * 5 / 7)
-    ret['sync'] = score >= 6
+    ret['rating'] = str(score * 5 / 3)
+    ret['sync'] = score == 5
     ret['flag'] = xbmc.convertLanguage(ret['language_eng'], xbmc.ISO_639_1)
     ret['seasonpack'] = item['evadpakk'] == '1'
 
