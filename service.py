@@ -553,7 +553,7 @@ params = get_params()
 debuglog(params)
 
 if params['action'] == 'search':
-    item = {'temp': False, 'rar': False, 'stack': False, 'year': xbmc.getInfoLabel("VideoPlayer.Year"),
+    item = {'temp': False, 'rar': False, 'stack': False, 'year': '',
             'title': normalize_string(xbmc.getInfoLabel("VideoPlayer.OriginalTitle")),
             'languages': [], 'preferredlanguage': params.get('preferredlanguage')}
 
