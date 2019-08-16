@@ -50,7 +50,9 @@ QUALITIES = [
     '1080p',
     'DVDRip',
     'BRRip',
-    'BDRip'
+    'BDRip',
+    'WEB',
+    'WEBRip'
 ]
 
 RELEASERS = [
@@ -75,14 +77,15 @@ RELEASERS = [
 
     'AVS',
     'BATV'
-    'SVA'
+    'SVA',
+
+    'TBS'
 ]
 
 HEADERS = {'User-Agent': 'xbmc subtitle plugin'}
 
 ARCHIVE_EXTENSIONS = [
     '.zip',
-    '.cbz',
     '.rar',
     '.cbr'
 ]
@@ -124,6 +127,7 @@ LANGUAGES = {
     "török": "Turkish",
 }
 
+EPISODE_REGEXP = re.compile(r'S?(?P<season>\d+)([x_-]|\.)*E?(?P<episode>\d+)', re.IGNORECASE)
 
 def recreate_dir(path):
     if xbmcvfs.exists(path):
@@ -367,19 +371,6 @@ def is_archive(filename):
     return False
 
 
-def extract(archive):
-    basename = os.path.basename(archive).replace('.', '_').decode('utf-8')
-    extracted = os.path.join(__temp__, basename, '')
-    debuglog('Extract %s to %s' % (archive, extracted))
-    xbmc.executebuiltin(('XBMC.Extract("%s","%s")' % (archive, extracted)).encode('utf-8'), True)
-
-    if xbmcvfs.exists(extracted):
-        return extracted
-    else:
-        errorlog('Error while extracting %s' % archive)
-        return None
-
-
 def download_file(item):
     filename = urllib.unquote_plus(item['filename'].decode("utf-8")).replace(' ', '_').decode('utf-8')
     localfile = os.path.join(__temp__, filename)
@@ -397,9 +388,7 @@ def download_file(item):
 
 
 def is_match(item, filename):
-    pattern = r'S?(?P<season>\d+)([x_-]|\.)*E?(?P<episode>\d+)'
-    regexp = re.compile(pattern,  re.IGNORECASE)
-    for match in regexp.finditer(filename):
+    for match in EPISODE_REGEXP.finditer(filename):
         season = int(item['season'])
         episode = int(item['episode'])
         fs = int(match.group('season'))
@@ -412,20 +401,16 @@ def is_match(item, filename):
 
 def recursive_search(path):
     (dirs, files) = xbmcvfs.listdir(path)
-
     if files:
         for file in files:
-            file = os.path.join(path, file.decode('utf-8'))
-            filename = os.path.basename(file)
-            if is_match(item, filename):
-                return file
+            if is_match(item, file.decode('utf-8')):
+                return "%s/%s" % (path, file.decode('utf-8'))
 
     if dirs:
         for dir in dirs:
-            file = recursive_search(os.path.join(path, dir.decode('utf-8')))
+            file = recursive_search("%s/%s" % (path, dir.decode('utf-8')))
             if file:
                 return file
-
     return None
 
 
@@ -436,16 +421,16 @@ def download(item):
 
     if is_archive(downloaded):
         debuglog('%s downloaded file is an archive' % downloaded)
-        extracted = extract(downloaded)
-        if extracted:
-            subtitle = recursive_search(extracted)
-            if not subtitle:
-                debuglog("No subtitle found by search. Open dialog from %s" % extracted)
-                dialog = xbmcgui.Dialog()
-                selected = dialog.browseSingle(1, __language__(32504), 'files', '.srt|.sub|.ssa|.smi|',
-                                               False, False, extracted)
-                if selected != extracted:
-                    subtitle = selected
+        archive = 'archive://%s' % urllib.quote_plus(downloaded)
+        subtitle = recursive_search(archive)
+
+        if not subtitle:
+            debuglog("No subtitle found by search. Open dialog from %s" % archive)
+            #dialog = xbmcgui.Dialog()
+            #selected = dialog.browseSingle(1, __language__(32504), 'files', '.srt|.sub|.ssa|.smi',
+            #                                   False, False, __temp__)
+            #if selected != archive:
+            #    subtitle = selected
     else:
         subtitle = downloaded
 
