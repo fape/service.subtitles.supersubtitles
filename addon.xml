@@ -11,15 +11,17 @@
   <extension point="xbmc.subtitle.module"
              library="service.py" />
   <extension point="xbmc.addon.metadata">
-    <summary lang="en">Super Subtitles</summary>
-    <description lang="en">Search and download subtitles from Super Subtitles (feliratok.info)</description>
-    <disclaimer lang="en"></disclaimer>
+    <summary lang="en_GB">Super Subtitles</summary>
+    <description lang="en_GB">Search and download subtitles from Super Subtitles (feliratok.info)</description>
     <platform>all</platform>
     <license>GNU GENERAL PUBLIC LICENSE. Version 2, June 1991</license>
-    <forum>http://forum.xbmc.org/showthread.php?tid=188591</forum>
-    <website>http://feliratok.info</website>
+    <forum>https://forum.kodi.tv/showthread.php?tid=188591</forum>
+    <website>https://www.feliratok.info/index.php</website>
     <email>fape88 at gmail dot com</email>
     <language></language>
     <source>https://github.com/fape/service.subtitles.supersubtitles</source>
+    <assets>
+      <icon>icon.png</icon>
+    </assets>
   </extension>
 </addon>

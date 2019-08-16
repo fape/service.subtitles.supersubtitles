@@ -229,7 +229,7 @@ def get_showids(item):
                         ret.append(data['ID'])
                         break
             else:
-                ret = map(lambda x: x['ID'], datas)
+                ret = [x['ID'] for x in datas]
         if '-100x' in ret:
             ret = []
 
@@ -268,13 +268,13 @@ def remove_duplications(items):
         if item['score'] > new_item['score']:
             new_item = item
         ret[item['id']] = new_item
-    return ret.values()
+    return list(ret.values())
 
 
 def convert_and_filter(items, episode):
-    data = filter(lambda x: int(x['ep']) == int(item['episode']) or x['evadpakk'] == '1', items)
-    data = map(convert, data)
-    data = filter(lambda x: x['language_eng'] in item['languages'], data)
+    data = [x for x in items if int(x['ep']) == int(item['episode']) or x['evadpakk'] == '1']
+    data = list(map(convert, data))
+    data = [x for x in data if x['language_eng'] in item['languages']]
     data = remove_duplications(data)
     return data
 
@@ -295,7 +295,7 @@ def search_subtitles_for_show(item, showid):
 
     # convert dict to list
     if type(data) is dict:
-        data = data.values()
+        data = list(data.values())
 
     searchlist = convert_and_filter(data, item['episode'])
 
