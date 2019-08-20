@@ -6,21 +6,25 @@ start = time.time()
 
 import os
 import sys
+py2 = sys.version_info.major == 2
 import shutil
 import unicodedata
 import os.path
 import re
 
-import xbmc
-import xbmcvfs
-import xbmcaddon
-import xbmcgui
-import xbmcplugin
+from kodi_six import xbmc, xbmcvfs, xbmcaddon, xbmcgui, xbmcplugin
+from kodi_six.utils import py2_encode, py2_decode
 
 import json
 
 import urllib
-import urllib2
+if py2:
+    from urllib import unquote, unquote_plus, urlencode, quote_plus
+    from urllib2 import urlopen, Request, HTTPError, URLError
+else :
+    from urllib.parse import unquote, unquote_plus, urlencode, quote_plus
+    from urllib.request import urlopen, Request
+    from urllib.error import HTTPError, URLError
 
 __addon__ = xbmcaddon.Addon()
 #__author__ = __addon__.getAddonInfo('author')
@@ -29,10 +33,10 @@ __scriptname__ = __addon__.getAddonInfo('name')
 __version__ = __addon__.getAddonInfo('version')
 __language__ = __addon__.getLocalizedString
 
-__cwd__ = xbmc.translatePath(__addon__.getAddonInfo('path')).decode("utf-8")
-__profile__ = xbmc.translatePath(__addon__.getAddonInfo('profile')).decode("utf-8")
-#__resource__   = xbmc.translatePath( os.path.join( __cwd__, 'resources', 'lib' ) ).decode("utf-8")
-__temp__ = xbmc.translatePath(os.path.join(__profile__, 'temp', '')).decode("utf-8")
+__cwd__ = xbmc.translatePath(__addon__.getAddonInfo('path'))
+__profile__ = xbmc.translatePath(__addon__.getAddonInfo('profile'))
+#__resource__   = xbmc.translatePath( os.path.join( __cwd__, 'resources', 'lib' ) )
+__temp__ = xbmc.translatePath(os.path.join(__profile__, 'temp', ''))
 
 #sys.path.append (__resource__)
 
@@ -135,7 +139,7 @@ def recreate_dir(path):
             fse = sys.getfilesystemencoding()
             if fse:
                 debuglog("Remove %s directory with file system encoding: %s" % (path, fse))
-                shutil.rmtree(path.encode(fse), ignore_errors=True)
+                shutil.rmtree(py2_encode(path, fse), ignore_errors=True)
             else:
                 debuglog("Remove %s directory with out file system encoding" % path)
                 shutil.rmtree(path, ignore_errors=True)
@@ -147,15 +151,17 @@ def recreate_dir(path):
         xbmcvfs.mkdirs(path)
 
 def normalize_string(str):
-    return unicodedata.normalize('NFKD', unicode(unicode(str, 'utf-8'))).encode('ascii', 'ignore')
+    return py2_encode(unicodedata.normalize('NFKD', py2_decode(py2_encode(str, 'utf-8'))), 'ascii'
+                      #, 'ignore'
+    )
 
 
 def lang_hun2eng(hunlang):
-    return LANGUAGES[hunlang.encode("utf-8").lower()]
+    return LANGUAGES[py2_encode(hunlang, "utf-8").lower()]
 
 
 def log(msg, level):
-    xbmc.log((u"### [%s] - %s" % (__scriptid__, msg,)).encode('utf-8'), level=level)
+    xbmc.log(py2_encode((u"### [%s] - %s" % (__scriptid__, msg)), 'utf-8'), level=level)
 
 
 def infolog(msg):
@@ -172,14 +178,14 @@ def debuglog(msg):
 
 
 def send_request(params):
-    url = "%s?%s" % (BASE_URL, urllib.urlencode(params))
+    url = "%s?%s" % (BASE_URL, urlencode(params))
     try:
         debuglog(url)
-        request = urllib2.Request(url, headers=HEADERS)
-        return urllib2.urlopen(request)
-    except urllib2.HTTPError as e:
+        request = Request(url, headers=HEADERS)
+        return urlopen(request)
+    except HTTPError as e:
         errorlog("HTTP Error: %s, %s" % (e.code, url))
-    except urllib2.URLError as e:
+    except URLError as e:
         errorlog("URL Error %s, %s" % (e.reason, url))
     except Exception as e:
         errorlog("Unexpected exception: %s" % e.message)
@@ -191,7 +197,7 @@ def query_data(params):
     response = send_request(params)
     if response:
         try:
-            return json.load(response, 'utf-8')
+            return json.loads(response.read(), encoding='utf-8')
         except ValueError as e:
             errorlog("Json Decode Error: %s" % e.message)
         except Exception as e:
@@ -357,8 +363,8 @@ def search(item):
             listitem.setProperty('hearing_imp', ('false', 'true')[it.get('hearing', False)])
 
             qparams = {'action': 'download', 'actionsortorder': str(index).zfill(2), 'id': it['id'],
-                       'filename': it['filename'].encode('utf8')}
-            url = "plugin://%s/?%s" % (__scriptid__, urllib.urlencode(qparams))
+                       'filename': py2_encode(it['filename'], 'utf-8')}
+            url = "plugin://%s/?%s" % (__scriptid__, urlencode(qparams))
 
             xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]), url=url, listitem=listitem, isFolder=False)
 
@@ -372,7 +378,7 @@ def is_archive(filename):
 
 
 def download_file(item):
-    filename = urllib.unquote_plus(item['filename'].decode("utf-8")).replace(' ', '_').decode('utf-8')
+    filename = py2_decode((unquote_plus(py2_decode(item['filename'], "utf-8")).replace(' ', '_')), 'utf-8')
     localfile = os.path.join(__temp__, filename)
     qparams = {'action': 'letolt', 'felirat': item['id']}
 
@@ -403,12 +409,12 @@ def recursive_search(path):
     (dirs, files) = xbmcvfs.listdir(path)
     if files:
         for file in files:
-            if is_match(item, file.decode('utf-8')):
-                return "%s/%s" % (path, file.decode('utf-8'))
+            if is_match(item, py2_decode(file, 'utf-8')):
+                return "%s/%s" % (path, py2_decode(file, 'utf-8'))
 
     if dirs:
         for dir in dirs:
-            file = recursive_search("%s/%s" % (path, dir.decode('utf-8')))
+            file = recursive_search("%s/%s" % (path, py2_decode(dir, 'utf-8')))
             if file:
                 return file
     return None
@@ -421,7 +427,7 @@ def download(item):
 
     if is_archive(downloaded):
         debuglog('%s downloaded file is an archive' % downloaded)
-        archive = 'archive://%s' % urllib.quote_plus(downloaded)
+        archive = 'archive://%s' % quote_plus(downloaded)
         subtitle = recursive_search(archive)
 
         if not subtitle:
@@ -491,7 +497,7 @@ def setup_tvshow_data(item, tryVideoPlayer=True):
 
 
 def setup_path(item):
-    item['file_original_path'] = urllib.unquote(xbmc.Player().getPlayingFile().decode('utf-8'))
+    item['file_original_path'] = unquote(py2_decode(xbmc.Player().getPlayingFile(), 'utf-8'))
     if item['file_original_path'].find("http") > -1:
         item['temp'] = True
 
@@ -542,7 +548,7 @@ if params['action'] == 'search':
             'title': normalize_string(xbmc.getInfoLabel("VideoPlayer.OriginalTitle")),
             'languages': [], 'preferredlanguage': params.get('preferredlanguage')}
 
-    for lang in urllib.unquote(params['languages']).decode('utf-8').split(","):
+    for lang in py2_decode(unquote(params['languages']), 'utf-8').split(","):
         item['languages'].append(lang)
 
     if not item['title']:
