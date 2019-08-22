@@ -1,3 +1,8 @@
+0.0.23
+- archive handling changes
+- leia addon related changes
+- inital python3 support
+
 0.0.22
 - open file browse dialog if automatic search failed in unpacked dir
 - change rating calculation logic
