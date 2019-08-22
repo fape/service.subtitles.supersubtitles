@@ -5,7 +5,6 @@
        provider-name="fape">
   <requires>
     <import addon="xbmc.python" version="2.26.0"/>
-    <import addon="xbmc.addon" version="17.9.910"/>
     <import addon="script.module.kodi-six" version="0.1.0"/>
     <import addon="vfs.libarchive" version="1.0.5"/>
   </requires>
@@ -15,11 +14,10 @@
     <summary lang="en_GB">Super Subtitles</summary>
     <description lang="en_GB">Search and download subtitles from Super Subtitles (feliratok.info)</description>
     <platform>all</platform>
-    <license>GNU GENERAL PUBLIC LICENSE. Version 2, June 1991</license>
+    <license>GPL-2.0-or-later</license>
     <forum>https://forum.kodi.tv/showthread.php?tid=188591</forum>
     <website>https://www.feliratok.info/index.php</website>
     <email>fape88 at gmail dot com</email>
-    <language></language>
     <source>https://github.com/fape/service.subtitles.supersubtitles</source>
     <assets>
       <icon>icon.png</icon>
