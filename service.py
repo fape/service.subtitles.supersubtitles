@@ -17,7 +17,6 @@ from kodi_six.utils import py2_encode, py2_decode
 
 import json
 
-import urllib
 if py2:
     from urllib import unquote, unquote_plus, urlencode, quote_plus
     from urllib2 import urlopen, Request, HTTPError, URLError
@@ -26,8 +25,9 @@ else :
     from urllib.request import urlopen, Request
     from urllib.error import HTTPError, URLError
 
+from contextlib import closing
+
 __addon__ = xbmcaddon.Addon()
-#__author__ = __addon__.getAddonInfo('author')
 __scriptid__ = __addon__.getAddonInfo('id')
 __scriptname__ = __addon__.getAddonInfo('name')
 __version__ = __addon__.getAddonInfo('version')
@@ -35,10 +35,8 @@ __language__ = __addon__.getLocalizedString
 
 __cwd__ = xbmc.translatePath(__addon__.getAddonInfo('path'))
 __profile__ = xbmc.translatePath(__addon__.getAddonInfo('profile'))
-#__resource__   = xbmc.translatePath( os.path.join( __cwd__, 'resources', 'lib' ) )
 __temp__ = xbmc.translatePath(os.path.join(__profile__, 'temp', ''))
 
-#sys.path.append (__resource__)
 
 BASE_URL = 'http://www.feliratok.info/index.php'
 
@@ -144,37 +142,22 @@ def recreate_dir(path):
                 debuglog("Remove %s directory with out file system encoding" % path)
                 shutil.rmtree(path, ignore_errors=True)
         except Exception as e:
-            errorlog("Exception while delete %s: %s" % (path, e.message))
+            debuglog("Exception while delete %s: %s" % (path, e.message))
 
     if not xbmcvfs.exists(path):
         debuglog("Create %s directory" % path)
         xbmcvfs.mkdirs(path)
 
 def normalize_string(str):
-    return py2_encode(unicodedata.normalize('NFKD', py2_decode(py2_encode(str, 'utf-8'))), 'ascii'
-                      #, 'ignore'
-    )
+    return py2_encode(unicodedata.normalize('NFKD', py2_decode(py2_encode(str, 'utf-8'))), 'ascii', 'ignore')
 
 
 def lang_hun2eng(hunlang):
     return LANGUAGES[py2_encode(hunlang, "utf-8").lower()]
 
 
-def log(msg, level):
-    xbmc.log(py2_encode((u"### [%s] - %s" % (__scriptid__, msg)), 'utf-8'), level=level)
-
-
-def infolog(msg):
-    log(msg, xbmc.LOGNOTICE)
-
-
-def errorlog(msg):
-    log(msg, xbmc.LOGERROR)
-
-
 def debuglog(msg):
-    log(msg, xbmc.LOGDEBUG)
-    #log(msg, xbmc.LOGNOTICE)
+    xbmc.log(py2_encode((u"### [%s] - %s" % (__scriptid__, msg)), 'utf-8'), level=xbmc.LOGDEBUG)
 
 
 def send_request(params):
@@ -184,35 +167,29 @@ def send_request(params):
         request = Request(url, headers=HEADERS)
         return urlopen(request)
     except HTTPError as e:
-        errorlog("HTTP Error: %s, %s" % (e.code, url))
+        debuglog("HTTP Error: %s, %s" % (e.code, url))
     except URLError as e:
-        errorlog("URL Error %s, %s" % (e.reason, url))
+        debuglog("URL Error %s, %s" % (e.reason, url))
     except Exception as e:
-        errorlog("Unexpected exception: %s" % e.message)
+        debuglog("Unexpected exception: %s" % e.message)
 
     return None
 
 
 def query_data(params):
-    response = send_request(params)
-    if response:
-        try:
-            return json.loads(response.read(), encoding='utf-8')
-        except ValueError as e:
-            errorlog("Json Decode Error: %s" % e.message)
-        except Exception as e:
-            errorlog("Unexpected exception: %s" % e.message)
+    with closing(send_request(params)) as response:
+        if response:
+            try:
+                return json.loads(response.read(), encoding='utf-8')
+            except ValueError as e:
+                debuglog("Json Decode Error: %s" % e.message)
+            except Exception as e:
+                debuglog("Unexpected exception: %s" % e.message)
     return None
 
 
 def notification(id):
-    xbmc.executebuiltin(u'Notification(%s,%s,%s,%s)' % (
-        __scriptname__,
-        __language__(id),
-        2000,
-        os.path.join(__cwd__, "icon.png")
-    )
-    )
+    xbmcgui.Dialog().notification(__scriptname__, __language__(id), os.path.join(__cwd__, "icon.png"), 2000)
 
 
 def get_showids(item):
@@ -286,7 +263,6 @@ def convert_and_filter(items, episode):
 
 
 def search_subtitles_for_show(item, showid):
-    #qparams = {'action': 'xbmc', 'sid': showid, 'ev': item['season'], 'rtol': item['episode']};
     qparams = {'action': 'xbmc', 'sid': showid, 'ev': item['season']}
 
     set_param_if_filename_contains(item, qparams, 'relj', TAGS)
@@ -299,7 +275,6 @@ def search_subtitles_for_show(item, showid):
         debuglog("No subtitle found for %s" % item['tvshow'])
         return None
 
-    # convert dict to list
     if type(data) is dict:
         data = list(data.values())
 
@@ -348,7 +323,6 @@ def search(item):
         index = 0
         for it in subtitles_list:
             index += 1
-            #label="%s | %s | %s"%(it['name'], it['filename'], it['uploader'])
             label = "%s [%s]" % (it['filename'], it['uploader'])
 
             if it['seasonpack']:
@@ -382,14 +356,11 @@ def download_file(item):
     localfile = os.path.join(__temp__, filename)
     qparams = {'action': 'letolt', 'felirat': item['id']}
 
-    response = send_request(qparams)
-
-    if response:
-        with open(localfile, 'wb') as fd:
-            shutil.copyfileobj(response, fd)
-
-        return localfile
-
+    with closing(send_request(qparams)) as response:
+        if response:
+            with open(localfile, 'wb') as fd:
+                shutil.copyfileobj(response, fd)
+            return localfile
     return None
 
 
@@ -432,11 +403,6 @@ def download(item):
 
         if not subtitle:
             debuglog("No subtitle found by search. Open dialog from %s" % archive)
-            #dialog = xbmcgui.Dialog()
-            #selected = dialog.browseSingle(1, __language__(32504), 'files', '.srt|.sub|.ssa|.smi',
-            #                                   False, False, __temp__)
-            #if selected != archive:
-            #    subtitle = selected
     else:
         subtitle = downloaded
 
@@ -444,7 +410,6 @@ def download(item):
         debuglog("Downloaded subtitle: %s" % subtitle)
         listitem = xbmcgui.ListItem(label=subtitle)
         xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]), url=subtitle, listitem=listitem, isFolder=False)
-        #notification(32501)
 
 
 def clean_movie_title(item, use_dir):
@@ -536,7 +501,7 @@ def get_params(string=""):
 
 
 
-infolog("%s - %s" % (__scriptname__, __version__))
+debuglog("%s - %s" % (__scriptname__, __version__))
 debuglog("start time %s" % (time.time() - start))
 
 recreate_dir(__temp__)
@@ -558,8 +523,8 @@ if params['action'] == 'search':
 
     item = setup_tvshow_data(item)
 
-    if item['episode'].lower().find("s") > -1:  # Check if season is "Special"
-        item['season'] = "0"  #
+    if item['episode'].lower().find("s") > -1:
+        item['season'] = "0"
         item['episode'] = item['episode'][-1:]
 
     search(item)
