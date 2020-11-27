@@ -6,24 +6,18 @@ start = time.time()
 
 import os
 import sys
-py2 = sys.version_info.major == 2
 import shutil
 import unicodedata
 import os.path
 import re
 
-from kodi_six import xbmc, xbmcvfs, xbmcaddon, xbmcgui, xbmcplugin
-from kodi_six.utils import py2_encode, py2_decode
+import xbmc, xbmcvfs, xbmcaddon, xbmcgui, xbmcplugin
 
 import json
 
-if py2:
-    from urllib import unquote, unquote_plus, urlencode, quote_plus
-    from urllib2 import urlopen, Request, HTTPError, URLError
-else :
-    from urllib.parse import unquote, unquote_plus, urlencode, quote_plus
-    from urllib.request import urlopen, Request
-    from urllib.error import HTTPError, URLError
+from urllib.parse import unquote, unquote_plus, urlencode, quote_plus
+from urllib.request import urlopen, Request
+from urllib.error import HTTPError, URLError
 
 from contextlib import closing
 
@@ -33,9 +27,9 @@ __scriptname__ = __addon__.getAddonInfo('name')
 __version__ = __addon__.getAddonInfo('version')
 __language__ = __addon__.getLocalizedString
 
-__cwd__ = xbmc.translatePath(__addon__.getAddonInfo('path'))
-__profile__ = xbmc.translatePath(__addon__.getAddonInfo('profile'))
-__temp__ = xbmc.translatePath(os.path.join(__profile__, 'temp', ''))
+__cwd__ = xbmcvfs.translatePath(__addon__.getAddonInfo('path'))
+__profile__ = xbmcvfs.translatePath(__addon__.getAddonInfo('profile'))
+__temp__ = xbmcvfs.translatePath(os.path.join(__profile__, 'temp', ''))
 
 
 BASE_URL = 'http://www.feliratok.info/index.php'
@@ -131,33 +125,33 @@ LANGUAGES = {
 
 EPISODE_REGEXP = re.compile(r'S?(?P<season>\d+)([x_-]|\.)*E?(?P<episode>\d+)', re.IGNORECASE)
 
-def recreate_dir(path):
-    if xbmcvfs.exists(path):
+def recreate_tmp_dir():
+    if xbmcvfs.exists(__temp__):
         try:
             fse = sys.getfilesystemencoding()
             if fse:
-                debuglog("Remove %s directory with file system encoding: %s" % (path, fse))
-                shutil.rmtree(py2_encode(path, fse), ignore_errors=True)
+                debuglog("Remove %s directory with file system encoding: %s" % (__temp__, fse))
+                shutil.rmtree(__temp__, ignore_errors=True)
             else:
-                debuglog("Remove %s directory with out file system encoding" % path)
-                shutil.rmtree(path, ignore_errors=True)
+                debuglog("Remove %s directory with out file system encoding" % __temp__)
+                shutil.rmtree(__temp__, ignore_errors=True)
         except Exception as e:
-            debuglog("Exception while delete %s: %s" % (path, e.message))
+            debuglog("Exception while delete %s: %s" % (__temp__, e.message))
 
-    if not xbmcvfs.exists(path):
-        debuglog("Create %s directory" % path)
-        xbmcvfs.mkdirs(path)
+    if not xbmcvfs.exists(__temp__):
+        debuglog("Create %s directory" % __temp__)
+        xbmcvfs.mkdirs(__temp__)
 
 def normalize_string(str):
-    return py2_encode(unicodedata.normalize('NFKD', py2_decode(py2_encode(str, 'utf-8'))), 'ascii', 'ignore')
+    return unicodedata.normalize('NFKD', str)
 
 
 def lang_hun2eng(hunlang):
-    return LANGUAGES[py2_encode(hunlang, "utf-8").lower()]
+    return LANGUAGES[hunlang.lower()]
 
 
 def debuglog(msg):
-    xbmc.log(py2_encode((u"### [%s] - %s" % (__scriptid__, msg)), 'utf-8'), level=xbmc.LOGDEBUG)
+    xbmc.log(u"### [%s] - %s" % (__scriptid__, msg), level=xbmc.LOGDEBUG)
 
 
 def send_request(params):
@@ -328,16 +322,13 @@ def search(item):
             if it['seasonpack']:
                 label += (' (%s)' % (__language__(32503)))
 
-            listitem = xbmcgui.ListItem(label=it['language_eng'],
-                                        label2=label,
-                                        iconImage=it['rating'],
-                                        thumbnailImage=it['flag']
-            )
+            listitem = xbmcgui.ListItem(label=it['language_eng'],label2=label)
+            listitem.setArt({'icon': it['rating'],'thumb': it['flag']})
             listitem.setProperty('sync', ('false', 'true')[it['sync']])
             listitem.setProperty('hearing_imp', ('false', 'true')[it.get('hearing', False)])
 
             qparams = {'action': 'download', 'actionsortorder': str(index).zfill(2), 'id': it['id'],
-                       'filename': py2_encode(it['filename'], 'utf-8')}
+                       'filename': it['filename']}
             url = "plugin://%s/?%s" % (__scriptid__, urlencode(qparams))
 
             xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]), url=url, listitem=listitem, isFolder=False)
@@ -352,7 +343,7 @@ def is_archive(filename):
 
 
 def download_file(item):
-    filename = py2_decode((unquote_plus(py2_decode(item['filename'], "utf-8")).replace(' ', '_')), 'utf-8')
+    filename = unquote_plus(item['filename']).replace(' ', '_')
     localfile = os.path.join(__temp__, filename)
     qparams = {'action': 'letolt', 'felirat': item['id']}
 
@@ -380,12 +371,12 @@ def recursive_search(path):
     (dirs, files) = xbmcvfs.listdir(path)
     if files:
         for file in files:
-            if is_match(item, py2_decode(file, 'utf-8')):
-                return "%s/%s" % (path, py2_decode(file, 'utf-8'))
+            if is_match(item, file):
+                return "%s/%s" % (path, file)
 
     if dirs:
         for dir in dirs:
-            file = recursive_search("%s/%s" % (path, py2_decode(dir, 'utf-8')))
+            file = recursive_search("%s/%s" % (path, dir, 'utf-8'))
             if file:
                 return file
     return None
@@ -462,7 +453,7 @@ def setup_tvshow_data(item, tryVideoPlayer=True):
 
 
 def setup_path(item):
-    item['file_original_path'] = unquote(py2_decode(xbmc.Player().getPlayingFile(), 'utf-8'))
+    item['file_original_path'] = unquote(xbmc.Player().getPlayingFile())
     if item['file_original_path'].find("http") > -1:
         item['temp'] = True
 
@@ -504,7 +495,7 @@ def get_params(string=""):
 debuglog("%s - %s" % (__scriptname__, __version__))
 debuglog("start time %s" % (time.time() - start))
 
-recreate_dir(__temp__)
+recreate_tmp_dir()
 params = get_params()
 debuglog(params)
 
@@ -513,7 +504,7 @@ if params['action'] == 'search':
             'title': normalize_string(xbmc.getInfoLabel("VideoPlayer.OriginalTitle")),
             'languages': [], 'preferredlanguage': params.get('preferredlanguage')}
 
-    for lang in py2_decode(unquote(params['languages']), 'utf-8').split(","):
+    for lang in unquote(params['languages']).split(","):
         item['languages'].append(lang)
 
     if not item['title']:
